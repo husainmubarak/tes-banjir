@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border-t-4 border-indigo-500">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">ESP32 Simulator</h1>
+        <p class="text-gray-500 mb-6 text-sm">Gunakan alat ini untuk mengirim data palsu ke server seolah-olah Anda adalah sensor.</p>
+
+        <!-- INPUT JARAK -->
+        <div class="mb-6">
+            <label class="block text-gray-700 font-bold mb-2">
+                Jarak Sensor ke Air (cm)
+            </label>
+            <input type="range" id="inputJarak" min="0" max="300" value="250" 
+                class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                <span>0cm (Penuh)</span>
+                <span id="labelJarak" class="font-bold text-indigo-600 text-lg">250 cm</span>
+                <span>300cm (Kering)</span>
+            </div>
+        </div>
+
+        <!-- INPUT SENSOR KONTAK -->
+        <div class="mb-8">
+            <label class="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                <input type="checkbox" id="inputKontak" class="form-checkbox h-5 w-5 text-indigo-600">
+                <span class="text-gray-700 font-medium">Sensor Kontak Basah? (Banjir)</span>
+            </label>
+        </div>
+
+        <!-- TOMBOL KIRIM -->
+        <button onclick="kirimData()" id="btnKirim"
+            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 transform hover:scale-105 active:scale-95 shadow-md">
+            KIRIM DATA KE SERVER 🚀
+        </button>
+
+        <div id="statusLog" class="mt-4 text-center text-sm text-gray-400">
+            Siap mengirim data...
+        </div>
+    </div>
+
+    <script>
+        // Update label angka saat slider digeser
+        const slider = document.getElementById('inputJarak');
+        const label = document.getElementById('labelJarak');
+        slider.addEventListener('input', function() {
+            label.innerText = this.value + " cm";
+        });
+
+        // Fungsi Kirim Data (Meniru ESP32)
+        async function kirimData() {
+            const btn = document.getElementById('btnKirim');
+            const statusLog = document.getElementById('statusLog');
+            
+            const tinggi = 300;
+            // Ambil nilai dari input
+            const jarak = parseInt(document.getElementById('inputJarak').value);
+            // Jika dicentang = 1, tidak = 0
+            const kontak_air = document.getElementById('inputKontak').checked ? 1 : 0;
+            
+            const kedalaman = tinggi - jarak;
+            // Efek Loading
+            btn.disabled = true;
+            btn.innerText = "Mengirim...";
+            btn.classList.add("opacity-50");
+
+            try {
+                // Tembak API Server (Backend)
+                const response = await fetch('/api/data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        kedalaman: kedalaman,
+                        kontak_air: kontak_air
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    statusLog.innerHTML = `<span class="text-green-600 font-bold">✓ Sukses! Server menerima data.</span>`;
+                    console.log("Response Server:", result);
+                } else {
+                    statusLog.innerHTML = `<span class="text-red-500">X Gagal: Server error.</span>`;
+                }
+            } catch (error) {
+                console.error(error);
+                statusLog.innerHTML = `<span class="text-red-500">X Error: Server mati?</span>`;
+            } finally {
+                // Reset Tombol
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = "KIRIM DATA KE SERVER 🚀";
+                    btn.classList.remove("opacity-50");
+                }, 500);
+            }
+        }
+    </script>
+</body>
+</html>
