@@ -12,14 +12,9 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(cors());
 app.use(bodyParser.json());
-
-// TAMBAHAN: Sajikan file statis (HTML/CSS) dari folder 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
-
-
 // --- 1. KONEKSI DATABASE ---
-// Sesuaikan user dan password dengan settingan MySQL/XAMPP Anda
 const db = mysql.createPool({
     host: 'localhost',
     user: 'root',      
@@ -65,12 +60,12 @@ app.post('/api/data', (req, res) => {
 });
 
 // --- 3. API UNTUK WEB (AMBIL DATA HISTORY) ---
-app.get('/api/history', (req, res) => {
-    db.query('SELECT * FROM sensor_logs ORDER BY waktu DESC LIMIT 20', (err, results) => {
-        if (err) return res.status(500).send(err);
-        res.json(results);
-    });
-});
+// app.get('/api/history', (req, res) => {
+//     db.query('SELECT * FROM sensor_logs ORDER BY waktu DESC LIMIT 20', (err, results) => {
+//         if (err) return res.status(500).send(err);
+//         res.json(results);
+//     });
+// });
 
 // Jalankan Server
 server.listen(3000, () => {
