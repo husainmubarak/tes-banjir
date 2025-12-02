@@ -4,12 +4,17 @@ const http = require('http');
 const { Server } = require("socket.io");
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const path = require('path'); // TAMBAHAN: Import library path
+const path = require('path'); 
+const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
+
+const token = '8180656299:AAFtS7ZEce8k5ZSHmkJSQJD26PvF1haF75k';
+const bot = new TelegramBot(token, {polling: true});
+const chatId = '-1003257620291';
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -22,6 +27,8 @@ const db = mysql.createPool({
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME
 });
+
+let statusTerakhir = 'AMAN'; 
 
 // --- 2. API UNTUK ESP32 (MENERIMA DATA) ---
 app.post('/api/data', (req, res) => {
@@ -58,6 +65,23 @@ app.post('/api/data', (req, res) => {
         // Kirim balasan ke ESP32 (Bisa dipakai untuk trigger sirine balik jika mau logic terpusat)
         res.json({ message: "Data saved", command_siren: status === 'BAHAYA' });
     });
+   
+    if (status !== statusTerakhir) {
+        statusTerakhir = status;
+
+        let pesan;
+        if (status === 'WASPADA') {
+            pesan = `⚠️ Peringatan WASPADA BANJIR! ⚠️\n\nKetinggian air mencapai: ${kedalaman} cm.\nHarap waspada!`;
+        } else if (status === 'BAHAYA') {
+            pesan = `🚨 ALERT BANJIR! 🚨\n\nKetinggian air mencapai: ${kedalaman} cm.\nSegera ambil tindakan darurat!`;
+        } else if (status === 'AMAN') {
+            pesan = `✅ Kondisi kembali AMAN.\nKetinggian air saat ini: ${kedalaman} cm.`;
+        }
+
+        if (pesan) {
+            bot.sendMessage(chatId, pesan).catch(console.error);
+        }
+    }
 });
 
 // --- 3. API UNTUK WEB (AMBIL DATA HISTORY) ---
