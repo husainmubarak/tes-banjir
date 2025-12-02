@@ -5,6 +5,7 @@ const { Server } = require("socket.io");
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const path = require('path'); // TAMBAHAN: Import library path
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
@@ -16,10 +17,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- 1. KONEKSI DATABASE ---
 const db = mysql.createPool({
-    host: 'localhost',
-    user: 'root',      
-    password: '12345',      
-    database: 'iot_banjir'
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
 });
 
 // --- 2. API UNTUK ESP32 (MENERIMA DATA) ---
