@@ -20,7 +20,6 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- 1. KONEKSI DATABASE ---
 const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
@@ -30,14 +29,10 @@ const db = mysql.createPool({
 
 let statusTerakhir = 'AMAN'; 
 
-// --- 2. API UNTUK ESP32 (MENERIMA DATA) ---
 app.post('/api/data', (req, res) => {
     const { kedalaman, kontak_air } = req.body;
 
-    // Logika Penentuan Status (Backend Logic)
     let status = 'AMAN';
-    
-    // Jika sensor kontak kena air (1) ATAU jarak ultrasonik < 100cm
     if (kontak_air == 1 || kedalaman >= 300) {
         status = 'BAHAYA';
     } else if (kedalaman > 250) {
@@ -45,14 +40,12 @@ app.post('/api/data', (req, res) => {
     }
 
     const query = 'INSERT INTO sensor_logs (kedalaman, sensor_kontak, status_alert) VALUES (?, ?, ?)';
-    
     db.query(query, [kedalaman, kontak_air, status], (err, result) => {
         if (err) {
             console.error(err);
             return res.status(500).send('Database Error');
         }
 
-        // Kirim data real-time ke Web Frontend via Socket.io
         io.emit('sensor_update', {
             kedalaman: kedalaman,
             kontak: kontak_air,
@@ -61,8 +54,7 @@ app.post('/api/data', (req, res) => {
         });
 
         console.log(`Data Masuk: kedalaman ${kedalaman}cm | Kontak: ${kontak_air} | Status: ${status}`);
-        
-        // Kirim balasan ke ESP32 (Bisa dipakai untuk trigger sirine balik jika mau logic terpusat)
+
         res.json({ message: "Data saved", command_siren: status === 'BAHAYA' });
     });
    
@@ -71,9 +63,9 @@ app.post('/api/data', (req, res) => {
 
         let pesan;
         if (status === 'WASPADA') {
-            pesan = `⚠️ Peringatan WASPADA BANJIR! ⚠️\n\nKetinggian air mencapai: ${kedalaman} cm.\nHarap waspada!`;
+            pesan = `⚠️ WASPADA BANJIR! ⚠️\nKetinggian air mencapai: ${kedalaman} cm.\nHarap waspada!`;
         } else if (status === 'BAHAYA') {
-            pesan = `🚨 ALERT BANJIR! 🚨\n\nKetinggian air mencapai: ${kedalaman} cm.\nSegera ambil tindakan darurat!`;
+            pesan = `🚨 ALERT BANJIR! 🚨\nKetinggian air mencapai: ${kedalaman} cm.\nSegera ambil tindakan darurat!`;
         } else if (status === 'AMAN') {
             pesan = `✅ Kondisi kembali AMAN.\nKetinggian air saat ini: ${kedalaman} cm.`;
         }
@@ -84,15 +76,6 @@ app.post('/api/data', (req, res) => {
     }
 });
 
-// --- 3. API UNTUK WEB (AMBIL DATA HISTORY) ---
-// app.get('/api/history', (req, res) => {
-//     db.query('SELECT * FROM sensor_logs ORDER BY waktu DESC LIMIT 20', (err, results) => {
-//         if (err) return res.status(500).send(err);
-//         res.json(results);
-//     });
-// });
-
-// Jalankan Server
 server.listen(3000, () => {
     console.log('Server berjalan di port 3000');
     console.log('Pastikan ESP32 mengirim data ke: http://localhost:3000/api/data');
