@@ -30,8 +30,11 @@ const db = mysql.createPool({
 let statusTerakhir = 'AMAN'; 
 
 app.post('/api/data', (req, res) => {
-    const { kedalaman, kontak_air } = req.body;
+    const { jarak } = req.body;
 
+    let kedalaman = 300 - jarak;
+    let kontak_air = kedalaman >= 250 ? 1 : 0;
+    
     let status = 'AMAN';
     if (kontak_air == 1 || kedalaman >= 300) {
         status = 'BAHAYA';
