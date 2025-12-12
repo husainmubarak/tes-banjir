@@ -53,12 +53,10 @@ async function getPrakiraanCuaca() {
         const response = await axios.get(URL_BMKG, { timeout: 5000 });
         console.log('--- Respons BMKG diterima. Status:', response.status);
 
-        // PATH DATA YANG BENAR: response.data[0].cuaca[0]
         const prakiraanArray = response.data?.data?.[0]?.cuaca?.[0];
         
         if (!prakiraanArray || prakiraanArray.length === 0) {
             console.log('--- Gagal: Struktur data BMKG tidak sesuai atau prakiraan cuaca kosong.');
-            // Jika data[0] tidak ada, ini mungkin karena kode ADM4 yang salah/tidak ada data
             return null;
         }
 
@@ -66,12 +64,6 @@ async function getPrakiraanCuaca() {
         const cuacaTerdekat = prakiraanArray[0]; 
         
         console.log('--- Data Cuaca Ditemukan:', cuacaTerdekat.weather_desc_en);
-
-        // Pastikan nama properti disesuaikan dengan respons Postman:
-        // t -> suhu (temp)
-        // hu -> kelembaban (humidity)
-        // ws -> kecepatan angin (wind speed)
-        // tcc -> tutupan awan (total cloud cover)
         
         return {
             waktu_prakiraan: cuacaTerdekat.local_datetime, // Gunakan waktu lokal
@@ -120,7 +112,6 @@ app.post('/api/data', async (req, res) => {
     const waktu_prakiraan = dataCuaca?.waktu_prakiraan || null;
 
     // --- Langkah 3: Gabungkan Data & Simpan ke Tabel Agregasi ---
-    // (Kode penyimpanan database ini tetap sama)
     const queryAgregasi = `INSERT INTO data_agregasi (kedalaman, sensor_kontak, status_alert, cuaca_terdekat, suhu_terdekat, kelembaban_terdekat, ws_terdekat, tcc_terdekat) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
     db.query(queryAgregasi, 
@@ -132,7 +123,6 @@ app.post('/api/data', async (req, res) => {
         });
 
     // --- Langkah 4: Kirim ke Frontend (Socket.IO) ---
-    // DATA DIBUAT TERPISAH SESUAI PERMINTAAN ANDA
     const dataSocket = {
         // Data Sensor
         kedalaman: kedalaman,
@@ -151,14 +141,11 @@ app.post('/api/data', async (req, res) => {
         // Tambahan
         is_hujan_deras: dataCuaca?.is_hujan_deras || false // Untuk logika di frontend
     };
-    io.emit('sensor_update', dataSocket); // <-- Klien menerima data yang sudah dipisah
+    io.emit('sensor_update', dataSocket); // <-- Klien menerima data 
     
     console.log(`Data Masuk: kedalaman ${kedalaman}cm | Status: ${status} | Cuaca: ${cuaca_terdekat}`);
-
-    // --- Langkah 5 & 6: Logika Notifikasi Telegram & Respons ESP32 (Tetap Sama) ---
-    // ... (Kode Telegram dan respons ESP32 tetap menggunakan logika yang sama)
     
-    // Logika notifikasi Telegram (Hanya disajikan untuk konteks, tidak diubah dari jawaban sebelumnya)
+    // Logika notifikasi Telegram 
     if (dataCuaca && dataCuaca.is_hujan_deras && status === 'AMAN' && statusTerakhir !== 'PERINGATAN_CUACA') {
         pesanTelegram = `🌧️ PERINGATAN DINI CUACA 🌧️\nDiprediksi ${dataCuaca.cuaca_terdekat} (Suhu: ${dataCuaca.suhu_terdekat}°C) dalam waktu dekat.\nKetinggian air saat ini ${kedalaman} cm (Masih AMAN), namun potensi banjir meningkat.`;
         statusTerakhir = 'PERINGATAN_CUACA'; 
